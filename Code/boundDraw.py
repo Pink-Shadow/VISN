@@ -67,20 +67,25 @@ class AppDemo(QWidget):
         super().__init__()
         self.resize(1920, 1080)
         self.setAcceptDrops(True)
+
+        self.points = []
+
         self.file_path = None
+        self.mouse_pos = None
+        self.clicked = 0
+        self.focus = 0
+        self.double_click = [0, None]
+        self.circle_size = 10
+
+        alert = QMessageBox()
+        alert.setText('Drag and drop a photo to start')
+        alert.exec()
 
         self.mainLayout = QVBoxLayout()
-
-        self.photoViewer = ImageLabel()
-        self.mainLayout.addWidget(self.photoViewer)
+        self.image = None
 
         self.setLayout(self.mainLayout)
         self.showMaximized()
-
-    def loadButton(self):
-        self.__init__()
-
-
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasImage:
@@ -97,22 +102,90 @@ class AppDemo(QWidget):
     def dropEvent(self, event):
         if event.mimeData().hasImage:
             event.setDropAction(Qt.CopyAction)
-            self.file_path = event.mimeData().urls()[0].toLocalFile()
-            self.set_image()
-
+            self.image = QImage(event.mimeData().urls()[0].toLocalFile())
+            self.update()
             event.accept()
         else:
             event.ignore()
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+        print('CLICK')
+        self.focus = 0
+        pos = event.pos()
         if(event.button() == Qt.LeftButton):
-            print("YES FFINALLY")
+            for i in self.points:
+                if i.x()-self.circle_size <= pos.x() < i.x()+self.circle_size and i.y()-self.circle_size <= pos.y() < i.y()+self.circle_size:
+                    self.focus = 1
+                    break
+
+            if not self.focus:
+                self.clicked = 1
+                if len(self.points) < 2 : self.points.append(pos)
+
+        self.update()
         return super().mousePressEvent(event)
 
-    def set_image(self):
-        self.photoViewer.setPixmap(QPixmap(self.file_path))
-        self.photoViewer.setScaledContents(True)
-        self.photoViewer.setSizePolicy( QSizePolicy.Ignored, QSizePolicy.Ignored )
+    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent) -> None:
+        print('DOUBLE CLICK')
+        pos = event.pos()
+        if(event.button() == Qt.LeftButton):
+            for i in self.points:
+                if i.x()-self.circle_size <= pos.x() < i.x()+self.circle_size and i.y()-self.circle_size <= pos.y() < i.y()+self.circle_size:
+                    self.double_click = [1, i] 
+                    self.focus = 0
+                    break
+            
+
+        return super().mouseDoubleClickEvent(event)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+
+        if self.image != None:
+            painter.drawImage(0, 0, self.image)
+
+        
+        if self.double_click[0] and self.focus:
+            print('double click detected\n\n')
+            self.clicked = 0
+            painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
+            painter.setBrush(QBrush(Qt.red))
+            
+            self.points.pop(self.points.index(self.double_click[1]))
+            self.points.append(self.double_click[1])
+
+            for i in self.points:
+                painter.drawEllipse(i, self.circle_size, self.circle_size)   
+
+                     
+
+        if self.clicked:
+            print('click detected\n\n')
+            painter.setPen(QPen(Qt.red, 2, Qt.SolidLine))
+            painter.setBrush(QBrush(Qt.red))
+
+            for i in self.points:
+                painter.drawEllipse(i, self.circle_size, self.circle_size)
+           
+            self.clicked = 0
+            self.double_click = [0, None]
+        
+            
+
+        if len(self.points) == 2:
+            painter.setPen(QPen(Qt.black,  5, Qt.SolidLine))
+            painter.setBrush(Qt.NoBrush)
+
+            painter.drawRect(self.points[0].x(), self.points[0].y(), self.points[1].x()-self.points[0].x(), self.points[1].y()-self.points[0].y())
+
+
+        painter.end()
+        
+
+
+
+
+
 
 
 app = QApplication([])
