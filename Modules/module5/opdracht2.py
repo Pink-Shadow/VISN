@@ -7,6 +7,7 @@ digits = datasets.load_digits()
 clf = svm.SVC(gamma=0.001, C=100)
 
 len_data = len(digits.data)
+print(len_data)
 
 data, target, images = shuffle(digits.data, digits.target, digits.images)
 
@@ -15,6 +16,8 @@ train_target = target[:len_data//3]
 
 test_data = data[len_data//3:]
 test_target = target[len_data//3:]
+
+print(test_data[100])
 
 clf.fit(train_data, train_target)
 
